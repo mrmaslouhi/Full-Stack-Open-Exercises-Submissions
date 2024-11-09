@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Filter, PersonForm, Persons } from './components/Components'
+import Notification from './components/Notification'
 import personService from './services/persons'
 
 
@@ -17,6 +18,8 @@ const App = () => {
   const [newName, setNewName] = useState("")
   const [newNumber, setNewNumber] = useState("")
   const [nameToFilter, setNameToFilter] = useState("")
+  const [addMessage, setAddMessage] = useState(null)
+  const [messageType, setMessageType] = useState("")
 
   const addData = (event) => {
     event.preventDefault()
@@ -29,14 +32,22 @@ const App = () => {
     }
     else if (persons.some(person => person.name === newName)) {
       if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
-       const thisPerson = persons.find(person => person.name === newName)
-       personService
-       .update(thisPerson.id, { ...thisPerson, number: newNumber })
-       .then(returnedPerson => {
-        setPersons(persons.map(person => person.name === returnedPerson.name ? returnedPerson : person))
-       })
-       setNewName("")
-       setNewNumber("")
+        const thisPerson = persons.find(person => person.name === newName)
+        personService
+          .update(thisPerson.id, { ...thisPerson, number: newNumber })
+          .then(returnedPerson => {
+            setPersons(persons.map(person => person.name === returnedPerson.name ? returnedPerson : person))
+          })
+          .catch(error => {
+            setAddMessage(`Information of ${thisPerson.name} has already been removed from server`)
+            setMessageType("error")
+            setTimeout(() => {
+              setAddMessage(null)
+              setMessageType(null)
+            }, 5000)
+          })
+        setNewName("")
+        setNewNumber("")
       }
     }
     else {
@@ -46,6 +57,10 @@ const App = () => {
         .then(returnedPerson => {
           setPersons(persons.concat(returnedPerson))
         })
+      setAddMessage(`Added ${newName}`)
+      setTimeout(() => {
+        setAddMessage(null)
+      }, 5000)
       setNewName("")
       setNewNumber("")
     }
@@ -82,6 +97,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={addMessage} type={messageType} />
       <Filter nameToFilter={nameToFilter} handleFilterChange={handleFilterChange} />
       <h2>add a new</h2>
       <PersonForm data={personFormProps} />
