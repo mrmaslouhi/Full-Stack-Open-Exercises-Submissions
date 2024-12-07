@@ -38,7 +38,7 @@ const App = () => {
           .then(returnedPerson => {
             setPersons(persons.map(person => person.name === returnedPerson.name ? returnedPerson : person))
           })
-          .catch(error => {
+          .catch(() => {
             setAddMessage(`Information of ${thisPerson.name} has already been removed from server`)
             setMessageType("error")
             setTimeout(() => {
