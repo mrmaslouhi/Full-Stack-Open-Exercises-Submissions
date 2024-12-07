@@ -14,8 +14,6 @@ app.use(cors())
 app.use(express.json())
 app.use(morgan('dev'))
 
-let numberOfPeople
-
 app.get('/api/persons', (request, response) => {
   Person.find({}).then(returnedPersons => {
     response.json(returnedPersons)
@@ -38,13 +36,13 @@ app.get('/api/persons/:id', (request, response) => {
         response.status(404).end()
       }
     })
-    .catch(error => {
-      response.status(500).send({ error: 'malformatted id '})
+    .catch(() => {
+      response.status(500).send({ error: 'malformatted id ' })
     })
-  
+
 })
 
-app.post('/api/persons/', (request, response) => {
+app.post('/api/persons/', (request, response, next) => {
   const body = request.body
 
   if (!body.number || !body.name) {
@@ -59,14 +57,16 @@ app.post('/api/persons/', (request, response) => {
     important: body.important || false,
   })
 
-  person.save().then(p => {
-    response.json(p)
-  })
+  person.save()
+    .then(p => {
+      response.json(p)
+    })
+    .catch(error => next(error))
 })
 
 app.delete('/api/persons/:id', (request, response, next) => {
   Person.findByIdAndDelete(request.params.id)
-    .then(result => {
+    .then(() => {
       response.status(204).end()
     })
     .catch(error => next(error))
@@ -81,7 +81,11 @@ app.put('/api/persons/:id', (request, response, next) => {
     important: body.important || false,
   }
 
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+  Person.findByIdAndUpdate(
+    request.params.id,
+    person,
+    { new: true, runValidators: true, context: 'query' }
+  )
     .then(updatedPerson => {
       response.json(updatedPerson)
     })
@@ -94,6 +98,8 @@ const errorHandler = (error, request, response, next) => {
 
   if (error.name === 'CastError') {
     return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
   }
 
   next(error)
@@ -101,9 +107,7 @@ const errorHandler = (error, request, response, next) => {
 
 app.use(errorHandler)
 
-
-
 const port = 3001
 app.listen(port, () => {
-  console.log("Server is running on port", port)
+  console.log('Server is running on port', port)
 })
